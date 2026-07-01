@@ -23,10 +23,10 @@
 // ============================================================
 
 window.MAESTRO_FIREBASE_CONFIG = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "votre-projet.firebaseapp.com",
-  projectId: "votre-projet",
-  storageBucket: "votre-projet.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx"
+  apiKey: "AIzaSyBgdOBq049mbCD1YdPxxPqj1nxEaTnwL-A",
+  authDomain: "maestrogames-2ad44.firebaseapp.com",
+  projectId: "maestrogames-2ad44",
+  storageBucket: "maestrogames-2ad44.firebasestorage.app",
+  messagingSenderId: "514386777857",
+  appId: "1:514386777857:web:c1f8d0bb302cc01cf72d00"
 };

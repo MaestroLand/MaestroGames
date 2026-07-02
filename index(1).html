@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maestro Games — La salle de jeux entre amis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<nav class="nav">
+  <div class="wrap">
+    <a href="index.html" class="brand">
+      <span class="mark">M</span>
+      <span><span class="maestro">Maestro</span> <span class="games">Games</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="current">Accueil</a>
+      <a href="morpion.html">Morpion</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-text">
+      <span class="eyebrow">Salle de jeux entre amis</span>
+      <h1 class="display">Devenez le<br><em>Maestro</em> du jeu.</h1>
+      <p class="lede">Un salon de mini-jeux pensé pour jouer entre amis, en un contre un ou en tournoi. Le morpion ouvre le bal — d'autres jeux rejoignent la scène bientôt.</p>
+      <div class="hero-ctas">
+        <a href="morpion.html" class="btn btn-gold">Jouer au Morpion</a>
+        <a href="#jeux" class="btn btn-outline">Voir les jeux</a>
+      </div>
+    </div>
+    <div class="hero-portrait">
+      <div class="card-fan">
+        <span data-suit="♣"></span>
+        <span data-suit="♦"></span>
+        <span data-suit="♠"></span>
+        <span data-suit="♥"></span>
+        <span data-suit="♣"></span>
+      </div>
+      <div class="portrait-hex">
+        <div class="portrait-hex-inner">
+          <img src="assets/profile.jpg" alt="Portrait du créateur de Maestro Games">
+        </div>
+      </div>
+      <div class="portrait-tag">
+        <strong>Le Maestro</strong>
+        Créateur de la salle de jeux
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="jeux">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <h2>Les jeux</h2>
+        <p>Choisissez une table et invitez vos amis.</p>
+      </div>
+    </div>
+    <div class="games-grid">
+
+      <a href="morpion.html" class="game-card active">
+        <span class="badge new">Nouveau</span>
+        <div class="game-card-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="4" width="56" height="56" rx="8" fill="var(--bg-elevated)" stroke="var(--border-strong)"/>
+            <path d="M24 8v48M40 8v48M8 24h48M8 40h48" stroke="var(--border-strong)" stroke-width="2"/>
+            <path d="M13 13l10 10M23 13L13 23" stroke="var(--teal)" stroke-width="3.2" stroke-linecap="round"/>
+            <circle cx="50" cy="18" r="6.4" stroke="var(--coral)" stroke-width="3.2"/>
+            <path d="M13 51l10 10M23 51L13 61" stroke="var(--teal)" stroke-width="3.2" stroke-linecap="round" opacity="0" />
+            <circle cx="32" cy="50" r="6.4" stroke="var(--gold)" stroke-width="3.2"/>
+          </svg>
+        </div>
+        <div>
+          <h3>Morpion</h3>
+          <p>Contre l'ordinateur ou en tournoi à élimination, en poules ou en rondes suisses.</p>
+        </div>
+      </a>
+
+      <div class="game-card soon">
+        <span class="badge soon">Bientôt</span>
+        <div class="game-card-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="24" r="15" fill="var(--coral)" opacity="0.9"/>
+            <circle cx="26" cy="24" r="15" stroke="rgba(244,241,232,0.25)"/>
+            <circle cx="40" cy="40" r="15" fill="var(--gold)"/>
+            <circle cx="40" cy="40" r="15" stroke="rgba(244,241,232,0.25)"/>
+          </svg>
+        </div>
+        <div>
+          <h3>Puissance 4</h3>
+          <p>Alignez vos jetons avant votre adversaire. En préparation.</p>
+        </div>
+      </div>
+
+      <div class="game-card soon">
+        <span class="badge soon">Bientôt</span>
+        <div class="game-card-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="30" cy="38" rx="22" ry="8" fill="var(--teal)" opacity="0.9"/>
+            <rect x="26" y="14" width="8" height="18" rx="4" fill="var(--teal)" opacity="0.9"/>
+            <circle cx="30" cy="12" r="4" fill="var(--teal)" opacity="0.9"/>
+            <path d="M8 38h44" stroke="rgba(244,241,232,0.25)"/>
+          </svg>
+        </div>
+        <div>
+          <h3>Bataille navale</h3>
+          <p>Coulez la flotte adverse en duel. En préparation.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <span>Maestro Games by Showmaaan</span>
+    <span>Hébergé sur GitHub Pages</span>
+  </div>
+</footer>
+
+</body>
+</html>

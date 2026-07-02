@@ -175,7 +175,7 @@
 
       <div class="notice" style="margin-top: 8px;">
         <span class="dot">●</span>
-        <span>Le tournoi à élimination directe est désormais synchronisé en temps réel via Firebase : inscriptions, bracket et matchs se mettent à jour automatiquement pour tous les participants. Les formats "Poules" et "Rondes suisses", ainsi que les grilles 4×4/5×5, arrivent dans une prochaine mise à jour. Le suivi du chrono nécessite de garder l'onglet du match ouvert.</span>
+        <span>Le tournoi à élimination directe est désormais synchronisé en temps réel via Firebase : inscriptions, bracket et matchs se mettent à jour automatiquement pour tous les participants. Avant chaque match, les deux joueurs doivent cliquer sur "Je suis prêt" ; passé un délai d'une minute, tout joueur qui n'a pas confirmé perd automatiquement le match. Les formats "Poules" et "Rondes suisses", ainsi que les grilles 4×4/5×5, arrivent dans une prochaine mise à jour. Le suivi du chrono nécessite de garder l'onglet du match ouvert.</span>
       </div>
 
       <div style="margin-top: 28px; display: flex; gap: 12px;">
@@ -276,6 +276,14 @@
       <div class="status-card">
         <div class="label">Statut</div>
         <div class="value" id="tm-status-text">—</div>
+      </div>
+
+      <div class="status-card hidden" id="tm-ready-card">
+        <div class="label">Avant le début du match</div>
+        <div class="value" id="tm-ready-value">60 s</div>
+        <div class="timer-bar"><div class="timer-bar-fill" id="tm-ready-bar" style="width:100%"></div></div>
+        <p id="tm-ready-status">—</p>
+        <button class="btn btn-gold btn-block" id="tm-ready-btn">Je suis prêt</button>
       </div>
 
       <div class="status-card" id="tm-chrono-card">

@@ -28,6 +28,9 @@
   var onlineStatusText = document.getElementById("online-status-text");
   var onlineYouSymbol = document.getElementById("online-you-symbol");
   var onlineCodeLabel = document.getElementById("online-code-label");
+  var onlineCodeBig = document.getElementById("online-code-big");
+  var onlineCopyCodeBtn = document.getElementById("online-copy-code-btn");
+  var onlineCopyCodeLabel = document.getElementById("online-copy-code-label");
   var onlineScoreYouSymbol = document.getElementById("online-score-you-symbol");
   var onlineScoreYouEl = document.getElementById("online-score-you");
   var onlineScoreOppEl = document.getElementById("online-score-opp");
@@ -149,6 +152,19 @@
       leaveGame();
       showView(viewSelect);
     });
+
+    if (onlineCopyCodeBtn) {
+      onlineCopyCodeBtn.addEventListener("click", function () {
+        if (!currentCode) return;
+        var restoreLabel = "Copier le code";
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(currentCode).then(function () {
+            onlineCopyCodeLabel.textContent = "Copié !";
+            setTimeout(function () { onlineCopyCodeLabel.textContent = restoreLabel; }, 1800);
+          });
+        }
+      });
+    }
   }
 
   function checkUrlCode() {
@@ -256,6 +272,7 @@
   // ---------- écoute temps réel ----------
   function listenToGame(code) {
     onlineCodeLabel.textContent = "#" + code;
+    if (onlineCodeBig) onlineCodeBig.textContent = code.split("").join(" ");
     onlineYouSymbol.textContent = myRole;
     onlineScoreYouSymbol.textContent = myRole;
     showView(viewOnlineGame);

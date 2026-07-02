@@ -19,11 +19,21 @@
   //   vainqueurFinal, vainqueurPseudo
   //
   // tournaments/{code}/matches/{matchId}
-  //   board, turn, playerX, playerO, pseudoX, pseudoO, statut,
+  //   board, turn, playerX, playerO, pseudoX, pseudoO,
+  //   statut: "attente_pret" | "en_cours" | "termine",
+  //   pret: { X, O } (confirmation "prêt" des deux joueurs),
+  //   pretDeadline (timestamp client, 1 minute après création),
   //   manchesGagnees: {X, O}, manchesJoueesTotal, mancheEnCours,
   //   manchesNecessaires, manchesTotal, gestionNul, suddenDeath,
   //   vainqueurMatch, tieBreakSymbole, chronoCoupSecondes,
-  //   dureeMatchSecondes, coupDeadline, matchDeadline
+  //   dureeMatchSecondes, coupDeadline, matchDeadline,
+  //   terminePar: "victoire" | "duree_max" | "forfait"
+  //
+  // Chaque match démarre en "attente_pret" : les deux joueurs doivent
+  // cliquer sur "Je suis prêt" dans un délai d'une minute. Si l'un
+  // des deux ne confirme pas à temps, il perd le match par forfait
+  // (son adversaire est qualifié automatiquement). Le plateau et les
+  // chronos de jeu ne démarrent qu'une fois les deux joueurs prêts.
   //
   // La progression du bracket (propagation des vainqueurs, création
   // de la petite finale, fin de tournoi) est gérée par transaction,
@@ -37,6 +47,7 @@
   ];
 
   var STATUT_LABELS = { attente: "En attente", en_cours: "En cours", termine: "Terminé" };
+  var PRET_DELAI_MS = 60 * 1000; // délai d'1 minute pour confirmer "prêt"
 
   // ---------- éléments : vue builder ----------
   var viewBuilder = document.getElementById("view-builder");
@@ -83,6 +94,11 @@
   var tmYouSymbol = document.getElementById("tm-you-symbol");
   var tmOpponentLine = document.getElementById("tm-opponent-line");
   var tmStatusText = document.getElementById("tm-status-text");
+  var tmReadyCard = document.getElementById("tm-ready-card");
+  var tmReadyValue = document.getElementById("tm-ready-value");
+  var tmReadyBar = document.getElementById("tm-ready-bar");
+  var tmReadyStatus = document.getElementById("tm-ready-status");
+  var tmReadyBtn = document.getElementById("tm-ready-btn");
   var tmChronoCard = document.getElementById("tm-chrono-card");
   var tmChronoValue = document.getElementById("tm-chrono-value");
   var tmChronoBar = document.getElementById("tm-chrono-bar");
@@ -674,7 +690,10 @@
       playerO: matchEntry.joueurO,
       pseudoX: matchEntry.pseudoX,
       pseudoO: matchEntry.pseudoO,
-      statut: "en_cours",
+      // le match démarre en attente de confirmation des deux joueurs
+      statut: "attente_pret",
+      pret: { X: false, O: false },
+      pretDeadline: now + PRET_DELAI_MS,
       manchesGagnees: { X: 0, O: 0 },
       manchesJoueesTotal: 0,
       mancheEnCours: 1,
@@ -684,11 +703,14 @@
       suddenDeath: false,
       vainqueurMatch: null,
       vainqueurSymbole: null,
+      terminePar: null,
       tieBreakSymbole: Math.random() < 0.5 ? "X" : "O",
       chronoCoupSecondes: chronoCoupSecondes,
       dureeMatchSecondes: dureeMatchSecondes,
-      coupDeadline: chronoCoupSecondes > 0 ? now + chronoCoupSecondes * 1000 : null,
-      matchDeadline: dureeMatchSecondes > 0 ? now + dureeMatchSecondes * 1000 : null,
+      // le chrono par coup et la durée max ne démarrent qu'une fois
+      // les deux joueurs prêts (voir runReadyTransaction)
+      coupDeadline: null,
+      matchDeadline: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -763,6 +785,7 @@
       update.statut = "termine";
       update.vainqueurMatch = seriesWinner === "X" ? m.playerX : m.playerO;
       update.vainqueurSymbole = seriesWinner;
+      update.terminePar = "victoire";
       update.coupDeadline = null;
     } else {
       var entreeMortSubite = !m.suddenDeath && manchesJoueesTotal >= m.manchesTotal;
@@ -864,6 +887,71 @@
     return db.collection("tournaments").doc(currentCode);
   }
 
+  // ---------- confirmation "prêt" avant le match ----------
+  function runReadyTransaction(matchId) {
+    var mRef = matchesColRef().doc(matchId);
+    return db.runTransaction(function (tx) {
+      return tx.get(mRef).then(function (mDoc) {
+        if (!mDoc.exists) return;
+        var m = mDoc.data();
+        if (m.statut !== "attente_pret") return;
+
+        var symbol = (m.playerX === currentUid) ? "X" : (m.playerO === currentUid ? "O" : null);
+        if (!symbol) return;
+
+        var pret = { X: !!(m.pret && m.pret.X), O: !!(m.pret && m.pret.O) };
+        if (pret[symbol]) return; // déjà confirmé
+        pret[symbol] = true;
+
+        var update = { pret: pret, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+
+        if (pret.X && pret.O) {
+          // les deux joueurs sont prêts : le match démarre réellement
+          update.statut = "en_cours";
+          update.pretDeadline = null;
+          update.coupDeadline = m.chronoCoupSecondes > 0 ? Date.now() + m.chronoCoupSecondes * 1000 : null;
+          update.matchDeadline = m.dureeMatchSecondes > 0 ? Date.now() + m.dureeMatchSecondes * 1000 : null;
+        }
+
+        tx.update(mRef, update);
+      });
+    }).catch(function (err) { console.error("Erreur de confirmation \"prêt\" :", err); });
+  }
+
+  // si le délai d'1 minute est dépassé et qu'un joueur n'a pas confirmé,
+  // il perd automatiquement le match (forfait)
+  function runReadyDeadlineTransaction(matchId) {
+    var tRef = tournoiDocRef();
+    var mRef = matchesColRef().doc(matchId);
+    return db.runTransaction(function (tx) {
+      return Promise.all([tx.get(mRef), tx.get(tRef)]).then(function (res) {
+        var mDoc = res[0], tDoc = res[1];
+        if (!mDoc.exists || !tDoc.exists) return;
+        var m = mDoc.data();
+        if (m.statut !== "attente_pret" || !m.pretDeadline || Date.now() < m.pretDeadline) return;
+
+        var pretX = !!(m.pret && m.pret.X);
+        var pretO = !!(m.pret && m.pret.O);
+        var seriesWinner;
+        if (pretX && !pretO) seriesWinner = "X";
+        else if (pretO && !pretX) seriesWinner = "O";
+        else seriesWinner = m.tieBreakSymbole; // aucun des deux n'a confirmé : tirage au sort
+
+        var update = {
+          statut: "termine",
+          vainqueurMatch: seriesWinner === "X" ? m.playerX : m.playerO,
+          vainqueurSymbole: seriesWinner,
+          terminePar: "forfait",
+          pretDeadline: null,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        tx.update(mRef, update);
+        var t = tDoc.data();
+        updateBracketAfterMatch(t, matchId, update.vainqueurMatch, tx, tRef);
+      });
+    }).catch(function (err) { console.error("Erreur de délai de préparation :", err); });
+  }
+
   function runMoveTransaction(matchId, index, forced) {
     var tRef = tournoiDocRef();
     var mRef = matchesColRef().doc(matchId);
@@ -944,7 +1032,11 @@
     if (matchTimerInterval) clearInterval(matchTimerInterval);
     matchTimerInterval = setInterval(function () {
       if (!lastMatchData) return;
-      if (lastMatchData.statut === "en_cours") {
+      if (lastMatchData.statut === "attente_pret") {
+        if (lastMatchData.pretDeadline && Date.now() >= lastMatchData.pretDeadline) {
+          runReadyDeadlineTransaction(currentMatchId);
+        }
+      } else if (lastMatchData.statut === "en_cours") {
         if (lastMatchData.coupDeadline && Date.now() >= lastMatchData.coupDeadline) {
           runMoveTransaction(currentMatchId, null, true);
         }
@@ -963,6 +1055,12 @@
       currentMatchId = null;
       showView(viewBracket);
       if (lastTournoiData) renderBracket(lastTournoiData);
+    });
+
+    tmReadyBtn.addEventListener("click", function () {
+      if (!currentMatchId) return;
+      tmReadyBtn.disabled = true;
+      runReadyTransaction(currentMatchId);
     });
   }
 
@@ -993,14 +1091,46 @@
     tmScoreYou.textContent = m.manchesGagnees[mySymbol];
     tmScoreOpp.textContent = m.manchesGagnees[oppSymbol];
 
-    if (m.statut === "termine") {
-      if (m.vainqueurMatch === currentUid) {
-        tmStatusText.textContent = "Vous avez gagné le match !";
+    // ---- phase "prêt" ----
+    if (m.statut === "attente_pret") {
+      tmReadyCard.classList.remove("hidden");
+      tmChronoCard.style.display = "none";
+
+      var pret = m.pret || { X: false, O: false };
+      var jaiConfirme = mySymbol && pret[mySymbol];
+      var oppConfirme = mySymbol && pret[oppSymbol];
+
+      tmReadyBtn.disabled = !!jaiConfirme;
+      tmReadyBtn.textContent = jaiConfirme ? "En attente de l'adversaire…" : "Je suis prêt";
+
+      if (jaiConfirme && !oppConfirme) {
+        tmReadyStatus.textContent = "Vous êtes prêt. En attente de " + (oppPseudo || "l'adversaire") + "…";
+      } else if (!jaiConfirme && oppConfirme) {
+        tmReadyStatus.textContent = (oppPseudo || "L'adversaire") + " est prêt. À vous de confirmer !";
+      } else if (jaiConfirme && oppConfirme) {
+        tmReadyStatus.textContent = "Les deux joueurs sont prêts, le match démarre…";
       } else {
-        tmStatusText.textContent = "Vous avez perdu ce match.";
+        tmReadyStatus.textContent = "Cliquez sur \"Je suis prêt\" pour lancer le match. Passé le délai, le joueur non prêt perd automatiquement.";
       }
+
+      tmStatusText.textContent = "En préparation du match";
     } else {
-      tmStatusText.textContent = m.turn === mySymbol ? "À vous de jouer" : "L'adversaire réfléchit…";
+      tmReadyCard.classList.add("hidden");
+      tmChronoCard.style.display = m.chronoCoupSecondes ? "" : "none";
+
+      if (m.statut === "termine") {
+        if (m.terminePar === "forfait") {
+          tmStatusText.textContent = m.vainqueurMatch === currentUid
+            ? "Vous avez gagné par forfait (adversaire non prêt à temps)"
+            : "Vous avez perdu par forfait (délai de préparation dépassé)";
+        } else if (m.vainqueurMatch === currentUid) {
+          tmStatusText.textContent = "Vous avez gagné le match !";
+        } else {
+          tmStatusText.textContent = "Vous avez perdu ce match.";
+        }
+      } else {
+        tmStatusText.textContent = m.turn === mySymbol ? "À vous de jouer" : "L'adversaire réfléchit…";
+      }
     }
 
     renderTimers(m);
@@ -1008,6 +1138,17 @@
 
   function renderTimers(m) {
     if (!m) return;
+
+    if (m.statut === "attente_pret") {
+      if (m.pretDeadline) {
+        var restantPret = Math.max(0, m.pretDeadline - Date.now());
+        var pctPret = Math.max(0, Math.min(100, (restantPret / PRET_DELAI_MS) * 100));
+        tmReadyValue.textContent = Math.ceil(restantPret / 1000) + " s";
+        tmReadyBar.style.width = pctPret + "%";
+        tmReadyBar.classList.toggle("urgent", restantPret < 10000);
+      }
+      return;
+    }
 
     if (m.statut === "termine" || !m.chronoCoupSecondes) {
       tmChronoCard.style.display = m.chronoCoupSecondes ? "" : "none";
